@@ -31,6 +31,40 @@ if ($isAdmin && $_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update_st
     }
 }
 
+if ($isAdmin && $_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["delete_pengaduan"])) {
+
+    $id = (int) $_POST["id"];
+
+    if ($id > 0) {
+        $foto = "";
+        $stmtFoto = mysqli_prepare($conn, "SELECT foto FROM pengaduan WHERE id=?");
+        mysqli_stmt_bind_param($stmtFoto, "i", $id);
+        mysqli_stmt_execute($stmtFoto);
+        mysqli_stmt_bind_result($stmtFoto, $foto);
+        mysqli_stmt_fetch($stmtFoto);
+        mysqli_stmt_close($stmtFoto);
+
+        $stmtDelete = mysqli_prepare($conn, "DELETE FROM pengaduan WHERE id=?");
+        mysqli_stmt_bind_param($stmtDelete, "i", $id);
+
+        if (mysqli_stmt_execute($stmtDelete)) {
+            if ($foto !== "") {
+                $pathFoto = __DIR__ . DIRECTORY_SEPARATOR . "uploads" . DIRECTORY_SEPARATOR . $foto;
+                if (file_exists($pathFoto)) {
+                    unlink($pathFoto);
+                }
+            }
+            $info = "Data pengaduan berhasil dihapus.";
+        } else {
+            $error = "Data pengaduan gagal dihapus.";
+        }
+
+        mysqli_stmt_close($stmtDelete);
+    } else {
+        $error = "Data hapus tidak valid.";
+    }
+}
+
 $query = "SELECT * FROM pengaduan ORDER BY id DESC";
 $result = mysqli_query($conn, $query);
 ?>
@@ -174,11 +208,22 @@ $result = mysqli_query($conn, $query);
             flex-wrap: wrap;
         }
 
+        .action-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: flex-start;
+        }
+
         select {
             padding: 9px 10px;
             border: 1px solid #d1d5db;
             border-radius: 10px;
             background: #ffffff;
+        }
+
+        .btn-delete {
+            background: #dc2626;
         }
 
         @media (max-width: 768px) {
@@ -260,15 +305,22 @@ $result = mysqli_query($conn, $query);
 
                                     <?php if ($isAdmin): ?>
                                         <td>
-                                            <form method="POST" class="form-inline">
-                                                <input type="hidden" name="id" value="<?= (int) $row["id"] ?>">
-                                                <select name="status" required>
-                                                    <option value="Menunggu" <?= $row["status"] === "Menunggu" ? "selected" : "" ?>>Menunggu</option>
-                                                    <option value="Diproses" <?= $row["status"] === "Diproses" ? "selected" : "" ?>>Diproses</option>
-                                                    <option value="Selesai" <?= $row["status"] === "Selesai" ? "selected" : "" ?>>Selesai</option>
-                                                </select>
-                                                <button type="submit" name="update_status">Update</button>
-                                            </form>
+                                            <div class="action-stack">
+                                                <form method="POST" class="form-inline">
+                                                    <input type="hidden" name="id" value="<?= (int) $row["id"] ?>">
+                                                    <select name="status" required>
+                                                        <option value="Menunggu" <?= $row["status"] === "Menunggu" ? "selected" : "" ?>>Menunggu</option>
+                                                        <option value="Diproses" <?= $row["status"] === "Diproses" ? "selected" : "" ?>>Diproses</option>
+                                                        <option value="Selesai" <?= $row["status"] === "Selesai" ? "selected" : "" ?>>Selesai</option>
+                                                    </select>
+                                                    <button type="submit" name="update_status">Update</button>
+                                                </form>
+
+                                                <form method="POST" onsubmit="return confirm('Yakin ingin menghapus data pengaduan ini?');">
+                                                    <input type="hidden" name="id" value="<?= (int) $row["id"] ?>">
+                                                    <button type="submit" name="delete_pengaduan" class="btn-delete">Hapus</button>
+                                                </form>
+                                            </div>
                                         </td>
                                     <?php endif; ?>
                                 </tr>
